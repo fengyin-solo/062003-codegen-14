@@ -22,6 +22,12 @@
           ¥{{ profit.toLocaleString() }}
         </span>
       </div>
+      <div v-if="overseasDailyTotal > 0" class="stat-item overseas">
+        <span class="label">🌏 海外日收入</span>
+        <span class="value success">
+          +¥{{ overseasDailyTotal.toLocaleString() }}
+        </span>
+      </div>
       <div class="stat-item">
         <span class="label">出道</span>
         <span class="value">{{ state.groups.length }}/{{ targetGroups }}</span>
@@ -41,6 +47,7 @@ defineProps({
   daysLeft: Number,
   profit: Number,
   theme: String,
+  overseasDailyTotal: { type: Number, default: 0 },
 })
 defineEmits(['back', 'toggle-theme'])
 
@@ -98,6 +105,13 @@ const targetGroups = GAME_CONFIG.victory.targetGroups
 
 .stat-item .value.success { color: var(--success); }
 .stat-item .value.danger { color: var(--danger); }
+
+.stat-item.overseas {
+  padding: 0.25rem 0.6rem;
+  background: var(--accent-soft);
+  border-radius: 8px;
+  border: 1px dashed var(--accent);
+}
 
 .theme-btn {
   background: var(--bg-secondary);

@@ -150,7 +150,14 @@ export function processDay(state) {
   let totalExpenses = state.totalExpenses
   let totalRevenue = state.totalRevenue
   const relationships = { ...state.relationships }
-  const trainees = state.trainees.map((t) => ({ ...t, stats: { ...t.stats }, languages: { ...t.languages } }))
+  const regionKeys = Object.keys(CFG.overseasRegions)
+  const trainees = state.trainees.map((t) => {
+    const languages = { ...t.languages }
+    for (const k of regionKeys) {
+      if (languages[k] == null) languages[k] = randInt(5, 15)
+    }
+    return { ...t, stats: { ...t.stats }, languages }
+  })
   const schedule = state.schedule
 
   const activityGroups = {}
@@ -212,11 +219,17 @@ export function processDay(state) {
 
     for (const [lang, range] of Object.entries(activity.languageGain || {})) {
       const gain = randInt(range[0], range[1])
+      const before = trainee.languages?.[lang] || 0
+      trainee.languages = trainee.languages || {}
       trainee.languages[lang] = clamp(
-        (trainee.languages[lang] || 0) + Math.round(gain * mult),
+        before + Math.round(gain * mult),
         0,
         CFG.thresholds.statCap
       )
+      logs.push({
+        day: state.day,
+        text: `${trainee.name} 参加${CFG.regionLabels[lang] || lang}集训，${CFG.regionLabels[lang] || lang}能力 ${before} → ${trainee.languages[lang]}。`,
+      })
     }
 
     trainee.fatigue = clamp(applyRange(trainee.fatigue, activity.fatigue), 0, 100)
@@ -589,8 +602,8 @@ export function promoteOverseas(state, groupId, region) {
   const regionCfg = CFG.overseasRegions[region]
   if (!regionCfg) return { success: false, message: '无效地区' }
 
-  const lastDay = (state.lastPromoDay || {})[`${groupId}_${region}`] || 0
-  if (state.day - lastDay < CFG.overseasPromotion.cooldownDays) {
+  const lastDay = (state.lastPromoDay || {})[`${groupId}_${region}`]
+  if (lastDay && state.day - lastDay < CFG.overseasPromotion.cooldownDays) {
     return {
       success: false,
       message: `距上次宣传还需 ${CFG.overseasPromotion.cooldownDays - (state.day - lastDay)} 天`,
@@ -623,11 +636,15 @@ export function promoteOverseas(state, groupId, region) {
 
   const groups = state.groups.map((g) => {
     if (g.id !== groupId) return g
+    const heat = { ...(g.regionHeat || {}) }
+    for (const k of Object.keys(CFG.overseasRegions)) {
+      if (heat[k] == null) heat[k] = 0
+    }
     return {
       ...g,
       regionHeat: {
-        ...g.regionHeat,
-        [region]: clamp((g.regionHeat?.[region] || 0) + Math.round(heatGain * langBonus), 0, 100),
+        ...heat,
+        [region]: clamp((heat[region] || 0) + Math.round(heatGain * langBonus), 0, 100),
       },
     }
   })
@@ -686,8 +703,13 @@ export function calcGroupOverseasRevenue(state, groupId) {
   const details = {}
   let totalDaily = 0
 
+  const regionHeat = group.regionHeat || {}
+  for (const key of Object.keys(CFG.overseasRegions)) {
+    if (regionHeat[key] == null) regionHeat[key] = 0
+  }
+
   for (const [region, cfg] of Object.entries(CFG.overseasRegions)) {
-    const heat = group.regionHeat?.[region] || 0
+    const heat = regionHeat[region] || 0
     if (heat < CFG.overseasRevenue.heatThreshold) {
       details[region] = 0
       continue

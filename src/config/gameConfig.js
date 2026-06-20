@@ -130,21 +130,21 @@ export const GAME_CONFIG = {
 
   // ── 海外宣传 ──
   overseasPromotion: {
-    baseCost: 8000,
-    heatGainRange: [15, 35],
-    fansGainRange: [200, 600],
+    baseCost: 5000,
+    heatGainRange: [20, 40],
+    fansGainRange: [300, 800],
     fatigueGain: [6, 12],
     stressGain: [8, 16],
-    minLanguageLevel: 40,
-    cooldownDays: 14,
+    minLanguageLevel: 30,
+    cooldownDays: 10,
   },
 
   // ── 跨区收益 ──
   overseasRevenue: {
-    heatThreshold: 60,
-    baseRevenuePerDay: [300, 800],
-    languageBonusMult: 0.008,
-    heatBonusMult: 0.015,
+    heatThreshold: 40,
+    baseRevenuePerDay: [400, 1000],
+    languageBonusMult: 0.01,
+    heatBonusMult: 0.02,
   },
 
   // ── 疲劳 / 压力阈值 ──

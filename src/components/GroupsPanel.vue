@@ -16,7 +16,7 @@
       </div>
 
       <div class="overseas-section">
-        <div class="section-title">🌏 海外热度</div>
+        <div class="section-title">🌏 海外热度（≥{{ heatThreshold }}解锁跨区日收益）</div>
         <div class="heat-list">
           <div v-for="(cfg, key) in overseasRegions" :key="key" class="heat-row">
             <span class="heat-icon">{{ cfg.icon }}</span>
@@ -28,17 +28,22 @@
                 :style="{ width: (group.regionHeat?.[key] || 0) + '%' }"
               ></div>
             </div>
-            <span class="heat-val">{{ group.regionHeat?.[key] || 0 }}</span>
+            <span class="heat-val" :class="{ unlocked: (group.regionHeat?.[key] || 0) >= heatThreshold }">
+              {{ group.regionHeat?.[key] || 0 }}
+            </span>
             <span
               v-if="revenueMap[group.id]?.details?.[key] > 0"
               class="heat-rev"
             >
               +¥{{ revenueMap[group.id].details[key].toLocaleString() }}/天
             </span>
+            <span v-else class="heat-lang" :title="'成员平均' + regionLabels[key]">
+              平均语言 {{ avgLanguage(group, key).toFixed(0) }}
+            </span>
           </div>
         </div>
         <div v-if="revenueMap[group.id]?.daily > 0" class="daily-rev">
-          跨区日收益 <strong>¥{{ revenueMap[group.id].daily.toLocaleString() }}</strong>
+          ✨ 跨区日收益 <strong>¥{{ revenueMap[group.id].daily.toLocaleString() }}</strong>
         </div>
         <div class="promo-btns">
           <button
@@ -54,7 +59,7 @@
           </button>
         </div>
         <div class="promo-cost">
-          单次宣传 ¥{{ promoCost.toLocaleString() }} · 成员平均语言≥{{ minLangLevel }}
+          宣传费 ¥{{ promoCost.toLocaleString() }} · 冷却{{ promoCooldown }}天 · 语言≥{{ minLangLevel }}
         </div>
       </div>
 
@@ -84,6 +89,7 @@ defineEmits(['release', 'promote-overseas'])
 
 const singleCost = GAME_CONFIG.single.creationCost
 const overseasRegions = GAME_CONFIG.overseasRegions
+const regionLabels = GAME_CONFIG.regionLabels
 const promoCost = GAME_CONFIG.overseasPromotion.baseCost
 const minLangLevel = GAME_CONFIG.overseasPromotion.minLanguageLevel
 const heatThreshold = GAME_CONFIG.overseasRevenue.heatThreshold
@@ -224,10 +230,26 @@ function promoteTip(group, region) {
   color: var(--text-secondary);
 }
 
+.heat-val.unlocked {
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.heat-lang {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  background: var(--bg-secondary);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+
 .heat-rev {
   color: var(--accent);
-  font-weight: 600;
-  font-size: 0.7rem;
+  font-weight: 700;
+  font-size: 0.72rem;
+  background: var(--accent-soft);
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
 }
 
 .daily-rev {

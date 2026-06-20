@@ -5,6 +5,7 @@
       :days-left="daysLeft"
       :profit="profit"
       :theme="theme"
+      :overseas-daily-total="overseasDailyTotal"
       @back="$emit('back')"
       @toggle-theme="$emit('toggle-theme')"
     />
