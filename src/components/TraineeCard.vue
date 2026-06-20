@@ -25,6 +25,13 @@
       </div>
     </div>
 
+    <div class="languages">
+      <span class="lang-title">🌐 语言</span>
+      <span v-for="(val, key) in trainee.languages" :key="key" class="lang-chip" :title="regionLabels[key]">
+        {{ regionIcons[key] }}{{ val }}
+      </span>
+    </div>
+
     <div v-if="score !== null" class="score">
       综合评分 <strong>{{ score }}</strong>
       <span v-if="trainee.status === 'trainee'" class="debut-hint">
@@ -49,6 +56,15 @@ const props = defineProps({
 const statKeys = GAME_CONFIG.stats
 const statLabels = GAME_CONFIG.statLabels
 const debutThreshold = GAME_CONFIG.rating.debutScoreThreshold
+const regionLabels = GAME_CONFIG.regionLabels
+
+const regionIcons = computed(() => {
+  const icons = {}
+  for (const [key, cfg] of Object.entries(GAME_CONFIG.overseasRegions)) {
+    icons[key] = cfg.icon
+  }
+  return icons
+})
 
 const statusLabel = computed(() => {
   const map = { trainee: '练习生', debuted: '已出道', left: '已离开' }
@@ -131,6 +147,32 @@ const statusClass = computed(() => ({
 
 .stat-label { display: block; font-size: 0.65rem; color: var(--text-muted); }
 .stat-val { font-weight: 700; font-size: 0.85rem; }
+
+.languages {
+  margin-top: 0.6rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.lang-title {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-right: 0.2rem;
+}
+
+.lang-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  font-size: 0.72rem;
+  padding: 0.1rem 0.45rem;
+  background: var(--bg-secondary);
+  border-radius: 999px;
+  font-weight: 600;
+  color: var(--accent);
+}
 
 .score {
   margin-top: 0.5rem;

@@ -18,6 +18,8 @@
     :can-end-day="canEndDay()"
     :rating-results="getRatingResults()"
     :calc-score="calcTraineeScore"
+    :overseas-daily-total="overseasDailyTotal"
+    :get-group-overseas-revenue="getGroupOverseasRevenue"
     @back="backToMenu"
     @toggle-theme="toggleTheme"
     @set-schedule="setSchedule"
@@ -27,6 +29,7 @@
     @debut="onDebut"
     @resolve-poaching="handlePoaching"
     @release-single="onReleaseSingle"
+    @promote-overseas="onPromoteOverseas"
   />
 </template>
 
@@ -47,6 +50,7 @@ const {
   profit,
   daysLeft,
   activeTrainees,
+  overseasDailyTotal,
   startNewGame,
   loadGame,
   setSchedule,
@@ -56,10 +60,12 @@ const {
   handlePoaching,
   handleDebut,
   handleReleaseSingle,
+  handlePromoteOverseas,
   dismissRating,
   backToMenu,
   getRatingResults,
   calcTraineeScore,
+  getGroupOverseasRevenue,
 } = useGame()
 
 onMounted(() => {
@@ -93,6 +99,13 @@ function onDebut(memberIds, groupName, callback) {
 
 function onReleaseSingle(groupId) {
   const result = handleReleaseSingle(groupId)
+  if (result && !result.success) {
+    alert(result.message)
+  }
+}
+
+function onPromoteOverseas(groupId, region) {
+  const result = handlePromoteOverseas(groupId, region)
   if (result && !result.success) {
     alert(result.message)
   }

@@ -88,6 +88,63 @@ export const GAME_CONFIG = {
       moneyCost: 1200,
       requiresTraining: false,
     },
+    language_jp: {
+      label: '日语集训',
+      icon: '🇯🇵',
+      statGain: {},
+      languageGain: { jp: [3, 6] },
+      fatigue: [8, 12],
+      stress: [4, 8],
+      moneyCost: 600,
+      requiresTraining: true,
+    },
+    language_en: {
+      label: '英语集训',
+      icon: '🇺🇸',
+      statGain: {},
+      languageGain: { en: [3, 6] },
+      fatigue: [8, 12],
+      stress: [4, 8],
+      moneyCost: 600,
+      requiresTraining: true,
+    },
+    language_zh: {
+      label: '华语集训',
+      icon: '🇨🇳',
+      statGain: {},
+      languageGain: { zh: [3, 6] },
+      fatigue: [8, 12],
+      stress: [4, 8],
+      moneyCost: 600,
+      requiresTraining: true,
+    },
+  },
+
+  // ── 海外地区 ──
+  overseasRegions: {
+    jp: { label: '日本', icon: '🇯🇵', language: 'jp', marketMultiplier: 1.2 },
+    en: { label: '欧美', icon: '🌍', language: 'en', marketMultiplier: 1.5 },
+    zh: { label: '大中华区', icon: '🇨🇳', language: 'zh', marketMultiplier: 1.0 },
+  },
+  regionLabels: { jp: '日语', en: '英语', zh: '华语' },
+
+  // ── 海外宣传 ──
+  overseasPromotion: {
+    baseCost: 8000,
+    heatGainRange: [15, 35],
+    fansGainRange: [200, 600],
+    fatigueGain: [6, 12],
+    stressGain: [8, 16],
+    minLanguageLevel: 40,
+    cooldownDays: 14,
+  },
+
+  // ── 跨区收益 ──
+  overseasRevenue: {
+    heatThreshold: 60,
+    baseRevenuePerDay: [300, 800],
+    languageBonusMult: 0.008,
+    heatBonusMult: 0.015,
   },
 
   // ── 疲劳 / 压力阈值 ──

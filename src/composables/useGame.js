@@ -10,6 +10,8 @@ import {
   calcProfit,
   calcTraineeScore,
   getRelationship,
+  promoteOverseas,
+  calcGroupOverseasRevenue,
 } from '../utils/gameLogic'
 import { saveToSlot } from '../utils/storage'
 
@@ -25,6 +27,14 @@ export function useGame() {
   const activeTrainees = computed(() =>
     state.value ? state.value.trainees.filter((t) => t.status !== 'left') : []
   )
+  const overseasDailyTotal = computed(() => {
+    if (!state.value) return 0
+    let total = 0
+    for (const group of state.value.groups) {
+      total += calcGroupOverseasRevenue(state.value, group.id).daily
+    }
+    return total
+  })
 
   function startNewGame(slotIndex) {
     state.value = createInitialGameState()
@@ -96,6 +106,16 @@ export function useGame() {
     return result
   }
 
+  function handlePromoteOverseas(groupId, region) {
+    if (!state.value) return null
+    const result = promoteOverseas(state.value, groupId, region)
+    if (result.success) {
+      state.value = result.state
+      autoSave()
+    }
+    return result
+  }
+
   function dismissRating() {
     if (!state.value) return
     state.value.pendingRating = false
@@ -112,6 +132,11 @@ export function useGame() {
     return getRelationship(state.value.relationships, idA, idB)
   }
 
+  function getGroupOverseasRevenue(groupId) {
+    if (!state.value) return { daily: 0, details: {} }
+    return calcGroupOverseasRevenue(state.value, groupId)
+  }
+
   return {
     state,
     currentSlot,
@@ -119,6 +144,7 @@ export function useGame() {
     profit,
     daysLeft,
     activeTrainees,
+    overseasDailyTotal,
     startNewGame,
     loadGame,
     setSchedule,
@@ -128,11 +154,13 @@ export function useGame() {
     handlePoaching,
     handleDebut,
     handleReleaseSingle,
+    handlePromoteOverseas,
     dismissRating,
     backToMenu,
     getRel,
     getRatingResults: () => (state.value ? getRatingResults(state.value) : []),
     calcTraineeScore,
+    getGroupOverseasRevenue,
     autoSave,
   }
 }

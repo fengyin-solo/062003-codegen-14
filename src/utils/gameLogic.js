@@ -24,6 +24,8 @@ export function createInitialGameState() {
     pendingRating: false,
     gameStatus: 'playing',
     lastSingleDay: {},
+    lastPromoDay: {},
+    overseasRevenueDaily: {},
   }
 }
 
@@ -32,10 +34,15 @@ function createTrainee(name, index) {
   for (const key of CFG.stats) {
     stats[key] = randInt(CFG.initial.statMin, CFG.initial.statMax)
   }
+  const languages = {}
+  for (const key of Object.keys(CFG.overseasRegions)) {
+    languages[key] = randInt(5, 20)
+  }
   return {
     id: `t${index}_${Date.now()}`,
     name,
     stats,
+    languages,
     fatigue: CFG.initial.fatigue + randInt(-5, 5),
     stress: CFG.initial.stress + randInt(-3, 3),
     status: 'trainee',
@@ -141,8 +148,9 @@ export function processDay(state) {
   let money = state.money
   let fans = state.fans
   let totalExpenses = state.totalExpenses
+  let totalRevenue = state.totalRevenue
   const relationships = { ...state.relationships }
-  const trainees = state.trainees.map((t) => ({ ...t, stats: { ...t.stats } }))
+  const trainees = state.trainees.map((t) => ({ ...t, stats: { ...t.stats }, languages: { ...t.languages } }))
   const schedule = state.schedule
 
   const activityGroups = {}
@@ -197,6 +205,15 @@ export function processDay(state) {
       const gain = randInt(range[0], range[1])
       trainee.stats[stat] = clamp(
         trainee.stats[stat] + Math.round(gain * mult),
+        0,
+        CFG.thresholds.statCap
+      )
+    }
+
+    for (const [lang, range] of Object.entries(activity.languageGain || {})) {
+      const gain = randInt(range[0], range[1])
+      trainee.languages[lang] = clamp(
+        (trainee.languages[lang] || 0) + Math.round(gain * mult),
         0,
         CFG.thresholds.statCap
       )
@@ -265,6 +282,18 @@ export function processDay(state) {
   money -= dailyCost
   totalExpenses += dailyCost
 
+  const overseas = collectOverseasDailyRevenue({ ...state, groups: state.groups }, trainees)
+  if (overseas.total > 0) {
+    money += overseas.total
+    totalRevenue += overseas.total
+    for (const [gid, info] of Object.entries(overseas.daily)) {
+      logs.push({
+        day: state.day,
+        text: `🌏 ${info.groupName} 海外跨区收益 ¥${info.amount.toLocaleString()}/天`,
+      })
+    }
+  }
+
   const newDay = state.day + 1
   const pendingRating = state.day % CFG.rating.interval === 0
 
@@ -316,6 +345,7 @@ export function processDay(state) {
     day: newDay,
     money,
     fans,
+    totalRevenue,
     totalExpenses,
     trainees,
     relationships,
@@ -323,6 +353,7 @@ export function processDay(state) {
     logs: [...state.logs, ...logs],
     pendingEvent,
     pendingRating,
+    overseasRevenueDaily: overseas.daily || {},
   }
 
   const result = checkVictory(nextState)
@@ -444,6 +475,11 @@ export function debutGroup(state, memberIds, groupName) {
     avgStats[key] = Math.round(members.reduce((s, m) => s + m.stats[key], 0) / members.length)
   }
 
+  const regionHeat = {}
+  for (const key of Object.keys(CFG.overseasRegions)) {
+    regionHeat[key] = 0
+  }
+
   const groups = [
     ...state.groups,
     {
@@ -452,6 +488,7 @@ export function debutGroup(state, memberIds, groupName) {
       memberIds: [...memberIds],
       debutedDay: state.day,
       avgStats,
+      regionHeat,
       totalSales: 0,
       singles: [],
     },
@@ -543,6 +580,145 @@ export function releaseSingle(state, groupId) {
     sales,
     revenue,
   }
+}
+
+export function promoteOverseas(state, groupId, region) {
+  const group = state.groups.find((g) => g.id === groupId)
+  if (!group) return { success: false, message: '组合不存在' }
+
+  const regionCfg = CFG.overseasRegions[region]
+  if (!regionCfg) return { success: false, message: '无效地区' }
+
+  const lastDay = (state.lastPromoDay || {})[`${groupId}_${region}`] || 0
+  if (state.day - lastDay < CFG.overseasPromotion.cooldownDays) {
+    return {
+      success: false,
+      message: `距上次宣传还需 ${CFG.overseasPromotion.cooldownDays - (state.day - lastDay)} 天`,
+    }
+  }
+
+  if (state.money < CFG.overseasPromotion.baseCost) {
+    return { success: false, message: '资金不足' }
+  }
+
+  const members = state.trainees.filter((t) => group.memberIds.includes(t.id))
+  const avgLang =
+    members.reduce((s, m) => s + (m.languages?.[region] || 0), 0) / members.length
+  if (avgLang < CFG.overseasPromotion.minLanguageLevel) {
+    return {
+      success: false,
+      message: `成员平均${CFG.regionLabels[region]}水平不足（需 ≥${CFG.overseasPromotion.minLanguageLevel}）`,
+    }
+  }
+
+  const heatGain = randInt(
+    CFG.overseasPromotion.heatGainRange[0],
+    CFG.overseasPromotion.heatGainRange[1]
+  )
+  const fansGain = randInt(
+    CFG.overseasPromotion.fansGainRange[0],
+    CFG.overseasPromotion.fansGainRange[1]
+  )
+  const langBonus = 1 + (avgLang - CFG.overseasPromotion.minLanguageLevel) * 0.005
+
+  const groups = state.groups.map((g) => {
+    if (g.id !== groupId) return g
+    return {
+      ...g,
+      regionHeat: {
+        ...g.regionHeat,
+        [region]: clamp((g.regionHeat?.[region] || 0) + Math.round(heatGain * langBonus), 0, 100),
+      },
+    }
+  })
+
+  const trainees = state.trainees.map((t) => {
+    if (!group.memberIds.includes(t.id)) return t
+    return {
+      ...t,
+      fatigue: clamp(
+        t.fatigue + randInt(CFG.overseasPromotion.fatigueGain[0], CFG.overseasPromotion.fatigueGain[1]),
+        0,
+        100
+      ),
+      stress: clamp(
+        t.stress + randInt(CFG.overseasPromotion.stressGain[0], CFG.overseasPromotion.stressGain[1]),
+        0,
+        100
+      ),
+      fans: t.fans + Math.round(fansGain / members.length),
+    }
+  })
+
+  const logs = [
+    ...state.logs,
+    {
+      day: state.day,
+      text: `🌏 ${group.name} 在${regionCfg.label}开展海外宣传，地区热度 +${Math.round(heatGain * langBonus)}，粉丝 +${fansGain}！`,
+    },
+  ]
+
+  return {
+    success: true,
+    state: {
+      ...state,
+      money: state.money - CFG.overseasPromotion.baseCost,
+      totalExpenses: state.totalExpenses + CFG.overseasPromotion.baseCost,
+      fans: state.fans + fansGain,
+      groups,
+      trainees,
+      logs,
+      lastPromoDay: {
+        ...state.lastPromoDay,
+        [`${groupId}_${region}`]: state.day,
+      },
+    },
+    heatGain: Math.round(heatGain * langBonus),
+    fansGain,
+  }
+}
+
+export function calcGroupOverseasRevenue(state, groupId) {
+  const group = state.groups.find((g) => g.id === groupId)
+  if (!group) return { daily: 0, details: {} }
+
+  const members = state.trainees.filter((t) => group.memberIds.includes(t.id))
+  const details = {}
+  let totalDaily = 0
+
+  for (const [region, cfg] of Object.entries(CFG.overseasRegions)) {
+    const heat = group.regionHeat?.[region] || 0
+    if (heat < CFG.overseasRevenue.heatThreshold) {
+      details[region] = 0
+      continue
+    }
+    const avgLang =
+      members.reduce((s, m) => s + (m.languages?.[region] || 0), 0) / Math.max(1, members.length)
+    const base =
+      (CFG.overseasRevenue.baseRevenuePerDay[0] + CFG.overseasRevenue.baseRevenuePerDay[1]) / 2
+    const revenue =
+      base *
+      cfg.marketMultiplier *
+      (1 + (heat - CFG.overseasRevenue.heatThreshold) * CFG.overseasRevenue.heatBonusMult) *
+      (1 + avgLang * CFG.overseasRevenue.languageBonusMult)
+    details[region] = Math.round(revenue)
+    totalDaily += details[region]
+  }
+
+  return { daily: totalDaily, details }
+}
+
+function collectOverseasDailyRevenue(state, trainees) {
+  let total = 0
+  const daily = {}
+  for (const group of state.groups) {
+    const { daily: groupDaily, details } = calcGroupOverseasRevenue(state, group.id)
+    if (groupDaily > 0) {
+      total += groupDaily
+      daily[group.id] = { groupName: group.name, amount: groupDaily, details }
+    }
+  }
+  return { total, daily }
 }
 
 export function getRatingResults(state) {

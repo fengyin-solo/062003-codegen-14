@@ -11,17 +11,31 @@
       >
         <span class="name">{{ trainee.name }}</span>
         <span v-if="trainee.illnessDays > 0" class="ill-tag">休养中</span>
-        <div v-else class="activity-btns">
-          <button
-            v-for="(act, key) in activities"
-            :key="key"
-            class="act-btn"
-            :class="{ active: schedule[trainee.id] === key }"
-            :title="`${act.label} ¥${act.moneyCost}`"
-            @click="$emit('set', trainee.id, key)"
-          >
-            {{ act.icon }}
-          </button>
+        <div v-else class="activity-cols">
+          <div class="activity-btns">
+            <button
+              v-for="(act, key) in basicActivities"
+              :key="key"
+              class="act-btn"
+              :class="{ active: schedule[trainee.id] === key }"
+              :title="`${act.label} ¥${act.moneyCost}`"
+              @click="$emit('set', trainee.id, key)"
+            >
+              {{ act.icon }}
+            </button>
+          </div>
+          <div class="activity-btns lang">
+            <button
+              v-for="(act, key) in languageActivities"
+              :key="key"
+              class="act-btn"
+              :class="{ active: schedule[trainee.id] === key }"
+              :title="`${act.label} ¥${act.moneyCost}`"
+              @click="$emit('set', trainee.id, key)"
+            >
+              {{ act.icon }}
+            </button>
+          </div>
         </div>
         <span v-if="schedule[trainee.id]" class="chosen">
           {{ activities[schedule[trainee.id]]?.label }}
@@ -30,7 +44,13 @@
     </div>
 
     <div class="legend">
-      <span v-for="(act, key) in activities" :key="key" class="legend-item">
+      <span v-for="(act, key) in basicActivities" :key="key" class="legend-item">
+        {{ act.icon }} {{ act.label }}
+      </span>
+    </div>
+    <div class="legend">
+      <span class="legend-hint">🌐 语言集训：</span>
+      <span v-for="(act, key) in languageActivities" :key="key" class="legend-item">
         {{ act.icon }} {{ act.label }}
       </span>
     </div>
@@ -58,6 +78,22 @@ const props = defineProps({
 defineEmits(['set', 'clear', 'end-day'])
 
 const activities = GAME_CONFIG.activities
+
+const basicActivities = computed(() => {
+  const result = {}
+  for (const [key, act] of Object.entries(activities)) {
+    if (!key.startsWith('language_')) result[key] = act
+  }
+  return result
+})
+
+const languageActivities = computed(() => {
+  const result = {}
+  for (const [key, act] of Object.entries(activities)) {
+    if (key.startsWith('language_')) result[key] = act
+  }
+  return result
+})
 
 const schedulable = computed(() =>
   props.trainees.filter((t) => t.status !== 'left')
@@ -93,9 +129,22 @@ const schedulable = computed(() =>
   font-size: 0.9rem;
 }
 
+.activity-cols {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
 .activity-btns {
   display: flex;
   gap: 0.35rem;
+}
+
+.activity-btns.lang {
+  padding-left: 0.2rem;
+  border-left: 2px solid var(--border);
+  padding-top: 0.2rem;
+  margin-top: 0.2rem;
 }
 
 .act-btn {
@@ -132,7 +181,16 @@ const schedulable = computed(() =>
   gap: 0.5rem 1rem;
   font-size: 0.75rem;
   color: var(--text-muted);
+}
+
+.legend + .legend {
+  margin-top: 0.3rem;
   margin-bottom: 1rem;
+}
+
+.legend-hint {
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .actions {

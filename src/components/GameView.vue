@@ -38,7 +38,9 @@
           :groups="state.groups"
           :trainees="state.trainees"
           :money="state.money"
+          :get-group-overseas-revenue="getGroupOverseasRevenue"
           @release="(id) => $emit('release-single', id)"
+          @promote-overseas="(gid, region) => $emit('promote-overseas', gid, region)"
         />
         <RelationshipPanel
           :trainees="state.trainees"
@@ -101,6 +103,8 @@ const props = defineProps({
   canEndDay: Boolean,
   ratingResults: Array,
   calcScore: Function,
+  overseasDailyTotal: { type: Number, default: 0 },
+  getGroupOverseasRevenue: { type: Function, default: () => ({ daily: 0, details: {} }) },
 })
 
 const emit = defineEmits([
@@ -113,6 +117,7 @@ const emit = defineEmits([
   'debut',
   'resolve-poaching',
   'release-single',
+  'promote-overseas',
 ])
 
 const showDebut = ref(false)
